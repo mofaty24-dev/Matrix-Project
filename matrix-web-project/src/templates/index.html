@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <title>MatrixProject (browser)</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        input[type="number"] {
+            width: 70px;
+        }
+
+        table {
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        td,
+        th {
+            border: 1px solid #666;
+            padding: 6px 10px;
+            text-align: center;
+        }
+
+        .controls {
+            margin-bottom: 12px;
+        }
+
+        .msg {
+            margin-top: 10px;
+            color: #b00;
+        }
+
+        .btn {
+            margin-left: 6px;
+        }
+
+        .clickable {
+            cursor: pointer;
+            background: #fafafa;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>MatrixProject — browser version</h1>
+
+    <div class="controls">
+        <label>Rows: <input id="rows" type="number" min="1" value="3"></label>
+        <label>Cols: <input id="cols" type="number" min="1" value="3"></label>
+        <button id="createBtn" class="btn">Create matrix inputs</button>
+        <button id="displayBtn" class="btn">Display matrix</button>
+        <button id="verifyBtn" class="btn">Verify (yes/no)</button>
+
+        <!-- separated buttons -->
+        <button id="stepOneBtn" class="btn">Step 1 (determining The First Un-zero Column)</button>
+        <!-- existing behavior -->
+        <button id="step1Btn" class="btn">Step 2(first Element Check)</button> <!-- check first element only -->
+        <button id="step3Btn" class="btn">Step 3</button> <!-- perform swap rows -->
+    </div>
+
+    <div id="inputsArea"></div>
+
+    <div id="displayArea"></div>
+
+    <div id="verificationArea"></div>
+
+    <div id="messages" class="msg"></div>
+
+    <script>
+        // matrix in memory
+        let matrix = [];
+
+        function clearMessages() { document.getElementById('messages').textContent = ''; }
+        function showMessage(m) { document.getElementById('messages').textContent = m; }
+
+        document.getElementById('createBtn').addEventListener('click', () => {
+            clearMessages();
+            const rows = parseInt(document.getElementById('rows').value, 10) || 0;
+            const cols = parseInt(document.getElementById('cols').value, 10) || 0;
+            if (rows < 1 || cols < 1) { showMessage('Rows and columns must be positive integers'); return; }
+            const area = document.getElementById('inputsArea');
+            area.innerHTML = '';
+            const table = document.createElement('table');
+            const tbody = document.createElement('tbody');
+            for (let i = 0; i < rows; i++) {
+                const tr = document.createElement('tr');
+                for (let j = 0; j < cols; j++) {
+                    const td = document.createElement('td');
+                    const inp = document.createElement('input');
+                    inp.type = 'number';
+                    inp.id = `elem_${i}_${j}`;
+                    inp.value = 0;
+                    td.appendChild(inp);
+                    tr.appendChild(td);
+                }
+                tbody.appendChild(tr);
+            }
+            table.appendChild(tbody);
+            area.appendChild(table);
+
+            // reset displayed matrix and in-memory matrix
+            matrix = Array.from({ length: rows }, () => Array(cols).fill(0));
+            document.getElementById('displayArea').innerHTML = '';
+            document.getElementById('verificationArea').innerHTML = '';
+        });
+
+        function readMatrixFromInputs() {
+            const rows = parseInt(document.getElementById('rows').value, 10) || 0;
+            const cols = parseInt(document.getElementById('cols').value, 10) || 0;
+            if (rows < 1 || cols < 1) { throw new Error('Invalid rows/cols'); }
+            const newM = [];
+            for (let i = 0; i < rows; i++) {
+                const row = [];
+                for (let j = 0; j < cols; j++) {
+                    const el = document.getElementById(`elem_${i}_${j}`);
+                    if (!el) throw new Error('Matrix input grid missing; click "Create matrix inputs"');
+                    const v = Number(el.value);
+                    if (!Number.isFinite(v)) throw new Error('All elements must be numbers');
+                    row.push(v);
+                }
+                newM.push(row);
+            }
+            matrix = newM;
+            return matrix;
+        }
+
+        function displayMatrixInteractive() {
+            clearMessages();
+            if (!matrix || !matrix.length) { showMessage('No matrix in memory. Create inputs and click Display.'); return; }
+            const area = document.getElementById('displayArea');
+            area.innerHTML = '<h3>Matrix</h3>';
+            const table = document.createElement('table');
+            const tbody = document.createElement('tbody');
+            for (let i = 0; i < matrix.length; i++) {
+                const tr = document.createElement('tr');
+                for (let j = 0; j < matrix[i].length; j++) {
+                    const td = document.createElement('td');
+                    td.textContent = matrix[i][j];
+                    td.className = 'clickable';
+                    td.title = 'Click to edit this value';
+                    td.addEventListener('click', () => {
+                        const newValRaw = prompt(`Enter new integer value for element (${i + 1},${j + 1}):`, String(matrix[i][j]));
+                        if (newValRaw === null) return;
+                        const newVal = Number(newValRaw);
+                        if (!Number.isFinite(newVal)) { alert('Please enter a valid number'); return; }
+                        matrix[i][j] = newVal;
+                        // also update input grid if present
+                        const inp = document.getElementById(`elem_${i}_${j}`);
+                        if (inp) inp.value = newVal;
+                        displayMatrixInteractive();
+                        renderVerificationPrompt();
+                    });
+                    tr.appendChild(td);
+                }
+                tbody.appendChild(tr);
+            }
+            table.appendChild(tbody);
+            area.appendChild(table);
+        }
+
+        document.getElementById('displayBtn').addEventListener('click', () => {
+            try {
+                readMatrixFromInputs();
+                displayMatrixInteractive();
+            } catch (e) {
+                showMessage(e.message);
+            }
+        });
+
+        // Verification UI: shows the matrix and asks yes/no
+        function renderVerificationPrompt() {
+            clearMessages();
+            const vArea = document.getElementById('verificationArea');
+            vArea.innerHTML = '';
+            if (!matrix || !matrix.length) return;
+            const p = document.createElement('p');
+            p.textContent = 'So this is the matrix you just entered. Are you sure this is the matrix you want to solve?';
+            vArea.appendChild(p);
+            const yesBtn = document.createElement('button');
+            yesBtn.textContent = 'Yes';
+            yesBtn.addEventListener('click', () => {
+                // show message for starting step one
+                showMessage("ok let's start step one");
+            });
+            const noBtn = document.createElement('button');
+            noBtn.textContent = 'No (edit element)';
+            noBtn.addEventListener('click', () => {
+                alert('Click any cell in the displayed matrix to edit it.');
+            });
+            vArea.appendChild(yesBtn);
+            vArea.appendChild(noBtn);
+        }
+
+        document.getElementById('verifyBtn').addEventListener('click', () => {
+            try {
+                if (document.querySelector('#inputsArea input')) readMatrixFromInputs();
+                displayMatrixInteractive();
+                renderVerificationPrompt();
+            } catch (e) {
+                showMessage(e.message);
+            }
+        });
+
+        // ---- Step 1: check first element only (do not swap) ----
+        function checkFirstElement() {
+            clearMessages();
+            if (!matrix || !matrix.length || !matrix[0]) { showMessage('Matrix is empty or malformed'); return; }
+            if (matrix[0][0] === 0) {
+                showMessage("first element can't be equal to zero so we'll go to step 3");
+            } else {
+                showMessage("first element isn't equal so we'll skip step 3 and go to step 4");
+            }
+        }
+
+        // ---- Step 3: perform swap rows task ----
+        function swapRowsStep3() {
+            clearMessages();
+            if (!matrix || !matrix.length || !matrix[0]) { showMessage('Matrix is empty or malformed'); return; }
+            const rows = matrix.length;
+            for (let r = 1; r < rows; r++) {
+                if (matrix[r][0] !== 0) {
+                    // swap rows 0 and r
+                    for (let c = 0; c < matrix[0].length; c++) {
+                        const tmp = matrix[0][c];
+                        matrix[0][c] = matrix[r][c];
+                        matrix[r][c] = tmp;
+                    }
+                    showMessage(`First row swapped successfully with row number ${r + 1}`);
+                    // update inputs grid if present
+                    for (let i = 0; i < matrix.length; i++) {
+                        for (let j = 0; j < matrix[i].length; j++) {
+                            const inp = document.getElementById(`elem_${i}_${j}`);
+                            if (inp) inp.value = matrix[i][j];
+                        }
+                    }
+                    displayMatrixInteractive();
+                    return;
+                }
+            }
+            showMessage('No suitable row found to swap with the first row');
+        }
+
+        // attach new event listeners
+        document.getElementById('step1Btn').addEventListener('click', () => {
+            try {
+                if (document.querySelector('#inputsArea input')) readMatrixFromInputs();
+                checkFirstElement();
+            } catch (e) {
+                showMessage(e.message);
+            }
+        });
+
+        document.getElementById('step3Btn').addEventListener('click', () => {
+            try {
+                if (document.querySelector('#inputsArea input')) readMatrixFromInputs();
+                swapRowsStep3();
+            } catch (e) {
+                showMessage(e.message);
+            }
+        });
+
+        // keep existing "Step One" behavior (highlight first column only, do NOT change first row color)
+        document.getElementById('stepOneBtn').addEventListener('click', () => {
+            try {
+                if (document.querySelector('#inputsArea input')) readMatrixFromInputs();
+                if (!matrix || !matrix.length) { showMessage('No matrix available'); return; }
+
+                // find first column (left to right) that has any non-zero value
+                const cols = matrix[0].length;
+                let foundCol = -1;
+                for (let c = 0; c < cols; c++) {
+                    let anyNonZero = false;
+                    for (let r = 0; r < matrix.length; r++) {
+                        if (matrix[r][c] !== 0) { anyNonZero = true; break; }
+                    }
+                    if (anyNonZero) { foundCol = c; break; }
+                }
+
+                // ensure the matrix is displayed
+                displayMatrixInteractive();
+
+                // highlight the FIRST COLUMN only (index 0) but do NOT change the first row's cell color
+                const displayTbl = document.querySelector('#displayArea table');
+                if (displayTbl) {
+                    // clear any inline backgrounds first
+                    Array.from(displayTbl.querySelectorAll('td')).forEach(td => td.style.background = '');
+                    // color the first column cells except the first row
+                    Array.from(displayTbl.querySelectorAll('tr')).forEach((tr, rIdx) => {
+                        const cell = tr.children[0];
+                        if (cell && rIdx !== 0) {
+                            cell.style.background = '#c8e6c9';
+                        }
+                    });
+                }
+
+                if (foundCol >= 0) {
+                    showMessage("so this is the first un-zero column (column " + (foundCol + 1) + ")");
+                } else {
+                    showMessage("No non-zero column found");
+                }
+            } catch (e) {
+                showMessage(e.message);
+            }
+        });
+
+        // initialize a default grid on load
+        document.getElementById('createBtn').click();
+    </script>
+</body>
+
+</html>
