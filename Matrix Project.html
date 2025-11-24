@@ -26,7 +26,7 @@
             )<!-- Add this button in the HTML controls section -->
             <button id="step4Btn" class="btn">Step 4 (scale first row by inverse of a₁₁)</button>
             <button id="step5Btn" class="btn">Step 5 (zero out first column below the leading)</button>
-            <button id="step6Btn" class="btn">Step 6 (apply steps 2–5 to a₂₂)</button>
+            <button id="step6Btn" class="btn">Step 6 (apply steps 2-5 to a₂₂)</button>
             <button id="jordanBtn" class="step-button" onclick="JordanElimination()">Jordan Elimination (the Final Step:
                 zero out
                 the matrix except the last column and the leadings)</button>
@@ -35,10 +35,11 @@
     <div id="displayArea"></div>
     <div id="verificationArea"></div>
     <div id="messages" class="msg"></div>
-    <button id="verifyBtn" class="btn">Verify Matrix</button>
+
     <button id="solutionBtn" class="btn">Get the number of solutions</button>
     <button id="solveBtn" class="btn">Get x, y, z</button>
     <script>
+
         function zeroOutFirstColumn() {
             clearMessages();
             if (!matrix || !matrix.length || !matrix[0]) {
@@ -107,27 +108,6 @@
             displayMatrixInteractive();
             showMessage(actions.length ? actions.join('\n') : "No changes needed. First column already zeroed below leading.");
         }
-        function solveXYZ() {
-            clearMessages();
-            if (!matrix || matrix.length !== 3 || matrix[0].length !== 4) {
-                showMessage('Matrix must be 3×4 (augmented) to solve for x, y, z');
-                return;
-            }
-            // Back-substitution
-            const [row1, row2, row3] = matrix;
-            const z = row3[3] / row3[2];
-            const y = (row2[3] - row2[2] * z) / row2[1];
-            const x = (row1[3] - row1[2] * z - row1[1] * y) / row1[0];
-            if (
-                !Number.isFinite(x) ||
-                !Number.isFinite(y) ||
-                !Number.isFinite(z)
-            ) {
-                showMessage('Cannot solve: matrix may not be in row-echelon form or has invalid values');
-                return;
-            }
-            showMessage(`Solution found:\n x = ${x.toFixed(3)}\n y = ${y.toFixed(3)}\n z = ${z.toFixed(3)}`);
-        }
         document.getElementById('solveBtn').addEventListener('click', () => {
             try {
                 if (document.querySelector('#inputsArea input')) readMatrixFromInputs();
@@ -163,64 +143,7 @@
                 showMessage(e.message);
             }
         });
-        function step6ProcessA22() {
-            clearMessages();
-            if (!matrix || matrix.length < 2 || matrix[0].length < 2) {
-                showMessage('Matrix must be at least 2×2 to process a₂₂');
-                return;
-            }
-            const pivot = matrix[1][1];
-            // Step 2: Check if a₂₂ is zero
-            if (pivot === 0) {
-                // Step 3: Try to swap row 2 with a lower row that has non-zero in column 2
-                let swapped = false;
-                for (let r = 2; r < matrix.length; r++) {
-                    if (matrix[r][1] !== 0) {
-                        for (let c = 0; c < matrix[0].length; c++) {
-                            const temp = matrix[1][c];
-                            matrix[1][c] = matrix[r][c];
-                            matrix[r][c] = temp;
-                        }
-                        showMessage(`Row 2 swapped with row ${r + 1} to get non-zero a₂₂`);
-                        swapped = true;
-                        break;
-                    }
-                }
-                if (!swapped) {
-                    showMessage('No suitable row found to swap with row 2 for non-zero a₂₂');
-                    return;
-                }
-            }
-            // Refresh pivot after possible swap
-            const newPivot = matrix[1][1];
-            if (newPivot === 0) {
-                showMessage('a₂₂ is still zero after swap. Cannot proceed.');
-                return;
-            }
-            // Step 4: Scale row 2 by inverse of a₂₂
-            for (let c = 0; c < matrix[0].length; c++) {
-                matrix[1][c] = matrix[1][c] / newPivot;
-            }
 
-            // Step 5: Zero out column 2 below row 2
-            for (let r = 2; r < matrix.length; r++) {
-                const factor = -matrix[r][1];
-                for (let c = 0; c < matrix[0].length; c++) {
-                    matrix[r][c] += factor * matrix[1][c];
-                }
-            }
-
-            // Update input fields
-            for (let i = 0; i < matrix.length; i++) {
-                for (let j = 0; j < matrix[i].length; j++) {
-                    const inp = document.getElementById(`elem_${i}_${j}`);
-                    if (inp) inp.value = matrix[i][j];
-                }
-            }
-
-            displayMatrixInteractive();
-            showMessage('Step 6 completed: processed a₂₂ through steps 2-5');
-        }
 
         document.getElementById('step6Btn').addEventListener('click', () => {
             try {
@@ -388,7 +311,6 @@
             table.appendChild(tbody);
             area.appendChild(table);
         }
-
         document.getElementById('displayBtn').addEventListener('click', () => {
             try {
                 readMatrixFromInputs();
@@ -397,41 +319,6 @@
                 showMessage(e.message);
             }
         });
-
-        // Verification UI: shows the matrix and asks yes/no
-        function renderVerificationPrompt() {
-            clearMessages();
-            const vArea = document.getElementById('verificationArea');
-            vArea.innerHTML = '';
-            if (!matrix || !matrix.length) return;
-            const p = document.createElement('p');
-            p.textContent = 'So this is the matrix you just entered. Are you sure this is the matrix you want to solve?';
-            vArea.appendChild(p);
-            const yesBtn = document.createElement('button');
-            yesBtn.textContent = 'Yes';
-            yesBtn.addEventListener('click', () => {
-                // show message for starting step one
-                showMessage("ok let's start step one");
-            });
-            const noBtn = document.createElement('button');
-            noBtn.textContent = 'No (edit element)';
-            noBtn.addEventListener('click', () => {
-                alert('Click any cell in the displayed matrix to edit it.');
-            });
-            vArea.appendChild(yesBtn);
-            vArea.appendChild(noBtn);
-        }
-
-        document.getElementById('verifyBtn').addEventListener('click', () => {
-            try {
-                if (document.querySelector('#inputsArea input')) readMatrixFromInputs();
-                displayMatrixInteractive();
-                renderVerificationPrompt();
-            } catch (e) {
-                showMessage(e.message);
-            }
-        });
-
         // ---- Step 1: check first element only (do not swap) ----
         function checkFirstElement() {
             clearMessages();
@@ -442,7 +329,6 @@
                 showMessage("first element isn't equal to zero so we'll skip step 3 and go to step 4");
             }
         }
-
         // ---- Step 3: perform swap rows task ----
         function swapRowsStep3() {
             // New condition: if a22 == 0, swap row 2 with row 3
@@ -461,7 +347,6 @@
                 }
                 displayMatrixInteractive();
                 return;
-
             }
             clearMessages();
             if (!matrix || !matrix.length || !matrix[0]) { showMessage('Matrix is empty or malformed'); return; }
@@ -489,7 +374,6 @@
             }
             showMessage('No suitable row found to swap with the first row');
         }
-
         // attach new event listeners
         document.getElementById('step1Btn').addEventListener('click', () => {
             try {
@@ -499,7 +383,6 @@
                 showMessage(e.message);
             }
         });
-
         document.getElementById('step3Btn').addEventListener('click', () => {
             try {
                 if (document.querySelector('#inputsArea input')) readMatrixFromInputs();
@@ -508,7 +391,6 @@
                 showMessage(e.message);
             }
         });
-
         // keep existing "Step One" behavior (highlight first column only, do NOT change first row color)
         document.getElementById('stepOneBtn').addEventListener('click', () => {
             try {
@@ -525,11 +407,12 @@
                     }
                     if (anyNonZero) { foundCol = c; break; }
                 }
-
                 // ensure the matrix is displayed
                 displayMatrixInteractive();
 
-                // highlight the FIRST COLUMN only (index 0) but do NOT change the first row's cell color
+                // highlight the FIRST COLUMN only (index 0) but do NOT change 
+                // the first row's cell color
+
                 const displayTbl = document.querySelector('#displayArea table');
                 if (displayTbl) {
                     // clear any inline backgrounds first
@@ -639,66 +522,6 @@
             displayMatrixInteractive();
             showMessage('Step 6 completed: processed a₂₂ through steps 2–5');
         }
-        function swapRowsStep3() {
-            clearMessages();
-            if (!matrix || !matrix.length || !matrix[0]) {
-                showMessage('Matrix is empty or malformed');
-                return;
-            }
-
-            const rows = matrix.length;
-            const cols = matrix[0].length;
-            const lastRowIdx = rows - 1;
-
-            // First: check for any row (except last) that is all zeros
-            for (let r = 0; r < lastRowIdx; r++) {
-                const isZeroRow = matrix[r].every(val => val === 0);
-                if (isZeroRow) {
-                    // Swap with last row
-                    const temp = matrix[r];
-                    matrix[r] = matrix[lastRowIdx];
-                    matrix[lastRowIdx] = temp;
-
-                    showMessage(`Row ${r + 1} was all zeros and has been swapped with the last row (${lastRowIdx + 1})`);
-
-                    // Update input fields
-                    for (let i = 0; i < rows; i++) {
-                        for (let j = 0; j < cols; j++) {
-                            const inp = document.getElementById(`elem_${i}_${j}`);
-                            if (inp) inp.value = matrix[i][j];
-                        }
-                    }
-
-                    displayMatrixInteractive();
-                    return;
-                }
-            }
-
-            // If no zero row found, proceed with normal swap logic
-            for (let r = 1; r < rows; r++) {
-                if (matrix[r][0] !== 0) {
-                    for (let c = 0; c < cols; c++) {
-                        const tmp = matrix[0][c];
-                        matrix[0][c] = matrix[r][c];
-                        matrix[r][c] = tmp;
-                    }
-
-                    showMessage(`First row has been swapped with row ${r + 1}`);
-
-                    for (let i = 0; i < rows; i++) {
-                        for (let j = 0; j < cols; j++) {
-                            const inp = document.getElementById(`elem_${i}_${j}`);
-                            if (inp) inp.value = matrix[i][j];
-                        }
-                    }
-
-                    displayMatrixInteractive();
-                    return;
-                }
-            }
-
-            showMessage('No suitable row found to swap with the first row');
-        }
         function solveXYZ() {
             clearMessages();
 
@@ -746,132 +569,7 @@
                 showMessage('Error computing full solution: ' + e.message);
             }
         }
-        function swapRowsStep3() {
-            clearMessages();
-            if (!matrix || !matrix.length || !matrix[0]) {
-                showMessage('Matrix is empty or malformed');
-                return;
-            }
-
-            const rows = matrix.length;
-            const cols = matrix[0].length;
-            const lastRowIdx = rows - 1;
-
-            // First: check for any row (except last) that is all zeros
-            for (let r = 0; r < lastRowIdx; r++) {
-                const isZeroRow = matrix[r].every(val => val === 0);
-                if (isZeroRow) {
-                    const temp = matrix[r];
-                    matrix[r] = matrix[lastRowIdx];
-                    matrix[lastRowIdx] = temp;
-
-                    showMessage(`Row ${r + 1} was all zeros and has been swapped with the last row (${lastRowIdx + 1})`);
-                    updateInputsAndDisplay();
-                    return;
-                }
-            }
-
-            // NEW CONDITION: if a22 is zero, swap row 2 with last row
-            if (matrix.length >= 2 && matrix[0].length >= 2 && matrix[1][1] === 0) {
-                const temp = matrix[1];
-                matrix[1] = matrix[lastRowIdx];
-                matrix[lastRowIdx] = temp;
-
-                showMessage(`a₂₂ was zero, so row 2 has been swapped with the last row (${lastRowIdx + 1})`);
-                updateInputsAndDisplay();
-                return;
-            }
-
-            // Default behavior: swap first row with any row that has non-zero in column 1
-            for (let r = 1; r < rows; r++) {
-                if (matrix[r][0] !== 0) {
-                    for (let c = 0; c < cols; c++) {
-                        const tmp = matrix[0][c];
-                        matrix[0][c] = matrix[r][c];
-                        matrix[r][c] = tmp;
-                    }
-
-                    showMessage(`First row has been swapped with row ${r + 1}`);
-                    updateInputsAndDisplay();
-                    return;
-                }
-            }
-
-            showMessage('No suitable row found to swap with the first row');
-        }
-
-        // Helper to update input fields and display
-        function updateInputsAndDisplay() {
-            for (let i = 0; i < matrix.length; i++) {
-                for (let j = 0; j < matrix[i].length; j++) {
-                    const inp = document.getElementById(`elem_${i}_${j}`);
-                    if (inp) inp.value = matrix[i][j];
-                }
-            }
-            displayMatrixInteractive();
-        }
-        function step6ProcessA22() {
-            clearMessages();
-            if (!matrix || matrix.length < 3 || matrix[0].length < 3) {
-                showMessage('Matrix must be at least 3×3 to process a₂₂ with extended conditions');
-                return;
-            }
-
-            const a22 = matrix[1][1];
-            const a12 = matrix[0][1];
-            const a32 = matrix[2][1];
-
-            // Check for special conditions
-            if (a22 === 0 && a12 === 0 && a32 !== 0) {
-                showMessage("The element a₂₂ = 0. To continue, go to Step 3 to swap the second row with the last row.");
-                return;
-            }
-            const lastRowIdx = matrix.length - 1;
-            // Check for any row that is all zeros
-            for (let r = 0; r < matrix.length; r++) {
-                const isZeroRow = matrix[r].every(val => val === 0);
-                if (isZeroRow && r !== lastRowIdx) {
-                    showMessage(`The row number ${r + 1} can't be equal to zero, so please go to Step 3 to swap it with the last row.`);
-                    return;
-                }
-            }
-
-            // Proceed with normal pivot check and elimination
-            if (a22 === 0) {
-                for (let r = 2; r < matrix.length; r++) {
-                    if (matrix[r][1] !== 0) {
-                        showMessage(`a₂₂ is zero. Please go to Step 3 to swap row 2 with row ${r + 1}.`);
-                        return;
-                    }
-                }
-                showMessage('No suitable row found to swap with row 2 for non-zero a₂₂');
-                return;
-            }
-
-            // Step 4: Scale row 2
-            for (let c = 0; c < matrix[0].length; c++) {
-                matrix[1][c] = matrix[1][c] / a22;
-            }
-
-            // Step 5: Zero out column 2 below row 2
-            for (let r = 2; r < matrix.length; r++) {
-                const factor = -matrix[r][1];
-                for (let c = 0; c < matrix[0].length; c++) {
-                    matrix[r][c] += factor * matrix[1][c];
-                }
-            }
-
-            // Update input fields
-            for (let i = 0; i < matrix.length; i++) {
-                for (let j = 0; j < matrix[i].length; j++) {
-                    const inp = document.getElementById(`elem_${i}_${j}`);
-                    if (inp) inp.value = matrix[i][j];
-                }
-            }
-
-            displayMatrixInteractive();
-            showMessage('Step 6 completed: processed a₂₂ through steps 2–5');
-        }
+        displayMatrixInteractive();
         function zeroOutFirstColumn() {
             clearMessages();
             if (!matrix || !matrix.length || !matrix[0]) {
@@ -884,13 +582,12 @@
             const a11 = matrix[0][0];
 
             if (a11 === 0) {
-                showMessage("The leading (a₁₁) is zero. Cannot proceed with elimination.");
+                showMessage("Pivot a₁₁ is zero. Cannot proceed.");
                 return;
             }
 
             let actions = [];
 
-            // Eliminate entries below a₁₁ in column 1
             for (let r = 1; r < rows; r++) {
                 const a_r1 = matrix[r][0];
                 if (a_r1 === 0) continue;
@@ -899,21 +596,13 @@
                 for (let c = 0; c < cols; c++) {
                     matrix[r][c] -= factor * matrix[0][c];
                 }
-
                 actions.push(`Row ${r + 1} updated: subtracted (${factor.toFixed(3)}) × Row 1`);
             }
 
-            // Update input fields
-            for (let i = 0; i < rows; i++) {
-                for (let j = 0; j < cols; j++) {
-                    const inp = document.getElementById(`elem_${i}_${j}`);
-                    if (inp) inp.value = matrix[i][j];
-                }
-            }
-
-            displayMatrixInteractive();
-            showMessage(actions.length ? actions.join('\n') : "No changes needed. First column already zeroed below pivot.");
+            updateInputsAndDisplay();
+            showMessage(actions.length ? actions.join('\n') : "First column already zeroed below pivot.");
         }
+
         function JordanElimination() {
             clearMessages();
             if (!matrix || matrix.length < 3 || matrix[0].length < 4) {
@@ -925,44 +614,42 @@
             const cols = matrix[0].length;
             let actions = [];
 
-            // Step 1: Eliminate column 2 (zero all except a₂₂)
+            // Scale row 2 pivot
             const pivot2 = matrix[1][1];
             if (pivot2 === 0) {
-                showMessage('Cannot eliminate column 2: pivot a₂₂ is zero');
+                showMessage('Cannot process: pivot a₂₂ is zero');
                 return;
             }
+            for (let c = 0; c < cols; c++) {
+                matrix[1][c] /= pivot2;
+            }
+            actions.push('Row 2 scaled so that a₂₂ = 1');
 
+            // Eliminate column 2
             for (let r = 0; r < rows; r++) {
-                if (r === 1) continue; // skip pivot row
-                const factor = matrix[r][1] / pivot2;
+                if (r === 1) continue;
+                const factor = matrix[r][1];
                 for (let c = 0; c < cols; c++) {
                     matrix[r][c] -= factor * matrix[1][c];
                 }
                 actions.push(`Row ${r + 1} updated: subtracted (${factor.toFixed(3)}) × Row 2`);
             }
 
-            // Step 2: Clean row 3 — zero all except a₃₃
+            // Scale row 3 pivot
             const pivot3 = matrix[2][2];
             if (pivot3 === 0) {
-                showMessage('Cannot process third row: pivot a₃₃ is zero');
+                showMessage('Cannot process: pivot a₃₃ is zero');
                 updateInputsAndDisplay();
                 return;
             }
-
             for (let c = 0; c < cols; c++) {
-                if (c !== 2) {
-                    matrix[2][c] = 0;
-                }
+                matrix[2][c] /= pivot3;
             }
-            actions.push('Row 3 cleaned: all elements zero except a₃₃');
+            actions.push('Row 3 scaled so that a₃₃ = 1');
 
-            // Step 3: Scale a₃₃ to 1
-            matrix[2][2] = 1;
-            actions.push('Row 3 pivot scaled to 1');
-
-            // Step 4: Eliminate column 3 (zero all except a₃₃)
+            // Eliminate column 3
             for (let r = 0; r < rows; r++) {
-                if (r === 2) continue; // skip pivot row
+                if (r === 2) continue;
                 const factor = matrix[r][2];
                 for (let c = 0; c < cols; c++) {
                     matrix[r][c] -= factor * matrix[2][c];
@@ -972,6 +659,16 @@
 
             updateInputsAndDisplay();
             showMessage(actions.join('\n'));
+        }
+
+        function updateInputsAndDisplay() {
+            for (let i = 0; i < matrix.length; i++) {
+                for (let j = 0; j < matrix[i].length; j++) {
+                    const inp = document.getElementById(`elem_${i}_${j}`);
+                    if (inp) inp.value = matrix[i][j];
+                }
+            }
+            displayMatrixInteractive();
         }
 
     </script>
